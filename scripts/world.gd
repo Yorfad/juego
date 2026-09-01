@@ -13,18 +13,50 @@ var _visitor_spot := Vector3(0.0, 0.0, -4.9)
 
 const ENV_MODEL_PATH := "res://models/environment.glb"
 const EXT_MODEL_PATH := "res://models/exterior.glb"
-const CREW_MODEL_PATH := "res://models/crew.glb"
 var _env_model: PackedScene = null
 var _ext_model: PackedScene = null
-var _crew_model: PackedScene = null
 
-# Posiciones de los companeros dentro de la caseta (deben coincidir con build_crew.py).
-const CREW_POS := {
-	"nava":   Vector3(2.55, 1.0, -1.7),
-	"robles": Vector3(2.70, 0.95, 1.65),
-	"pena":   Vector3(-2.95, 0.95, 1.45),
-	"ruiz":   Vector3(-1.8, 1.0, 3.2),
+# --- companeros: grafo de puntos por el que rondan (dentro y fuera) ---
+const WAYPOINTS := {
+	"window":  Vector3(1.6, 0.1, -2.2),
+	"desk":    Vector3(1.6, 0.1, 1.4),
+	"bunk":    Vector3(-2.4, 0.1, 1.4),
+	"center":  Vector3(0.2, 0.1, 0.3),
+	"door_in": Vector3(0.5, 0.1, 3.1),
+	"door":    Vector3(0.5, 0.1, 4.4),
+	"yard":    Vector3(0.5, 0.1, 7.0),
+	"rock":    Vector3(3.2, 0.1, 8.6),
+	"side_w":  Vector3(-6.3, 0.1, 5.5),
+	"side_e":  Vector3(6.3, 0.1, 5.5),
+	"front_w": Vector3(-6.5, 0.1, -2.0),
+	"front_e": Vector3(6.5, 0.1, -2.0),
+	"road":    Vector3(0.0, 0.1, -6.3),
+	"gate_w":  Vector3(-6.8, 0.1, -6.2),
+	"gate_e":  Vector3(6.8, 0.1, -6.2),
 }
+const LINKS := {
+	"window":  ["center", "desk"],
+	"desk":    ["window", "center", "bunk"],
+	"bunk":    ["desk", "center"],
+	"center":  ["window", "desk", "bunk", "door_in"],
+	"door_in": ["center", "door"],
+	"door":    ["door_in", "yard"],
+	"yard":    ["door", "side_w", "side_e"],
+	"rock":    ["side_e"],
+	"side_w":  ["yard", "front_w"],
+	"side_e":  ["yard", "rock", "front_e"],
+	"front_w": ["side_w", "gate_w"],
+	"front_e": ["side_e", "gate_e"],
+	"gate_w":  ["front_w", "road"],
+	"gate_e":  ["front_e", "road"],
+	"road":    ["gate_w", "gate_e"],
+}
+const COVER := ["desk", "bunk", "rock", "yard", "gate_w"]
+
+var _companions := {}      # id -> CharacterBody3D (companion.gd)
+var _door_pivot: Node3D
+var _door_shape: CollisionShape3D
+var _door_open := true      # empieza abierta para que el equipo entre y salga
 
 # --- trafico -----------------------------------------------------------
 # Todo el trafico llega SIEMPRE desde el oeste, por el carril cercano a la
@@ -48,7 +80,7 @@ var _vehicle        # Node3D del vehiculo actual, con vehicle.gd
 var _busy := false
 var _shift_running := false
 
-const INTRO := "Eres el comandante de un puesto de registro en la frontera, turno de noche. Aguanta hasta el traslado sin que ningun medidor toque su limite.\n\nWASD para moverte, raton para mirar, E para interactuar. Acercate a la ventanilla y atiende la fila.\n\nNadie sale limpio de aqui: si te dejas comprar te delatan, y si eres intachable estorbas."
+const INTRO := "Eres el comandante de un puesto de registro en la frontera, turno de noche. Aguanta hasta el traslado sin que ningun medidor toque su limite.\n\nWASD para moverte, raton para mirar, Espacio para saltar, E para interactuar. Atiende la ventanilla, sal por la puerta trasera a estirar las piernas, y vigila a tu equipo: no todos estan de tu lado.\n\nNadie sale limpio de aqui: si te dejas comprar te delatan, y si eres intachable estorbas."
 
 
 func _ready() -> void:
@@ -56,8 +88,6 @@ func _ready() -> void:
 		_env_model = load(ENV_MODEL_PATH)
 	if ResourceLoader.exists(EXT_MODEL_PATH):
 		_ext_model = load(EXT_MODEL_PATH)
-	if ResourceLoader.exists(CREW_MODEL_PATH):
-		_crew_model = load(CREW_MODEL_PATH)
 
 	_build_room()          # colisiones (invisibles si hay modelo, cajas grises si no)
 	_build_lights()
@@ -76,19 +106,6 @@ func _ready() -> void:
 			_gate_west.set_script(preload("res://scripts/boom_gate.gd"))
 		if _gate_east != null:
 			_gate_east.set_script(preload("res://scripts/boom_gate.gd"))
-	if _crew_model != null:
-		var crew: Node3D = _crew_model.instantiate()
-		crew.name = "CrewModel"
-		add_child(crew)
-
-	# Zona de "E" sobre cada companero para hablarle / darle ordenes.
-	for c in GameState.crew_defs:
-		var cid := str(c.get("id", ""))
-		if not CREW_POS.has(cid):
-			continue
-		var it = _make_interactable(Vector3(0.55, 1.8, 0.55), CREW_POS[cid] as Vector3,
-			Color(0.2, 0.2, 0.2), "Hablar con " + GameState.crew_name(cid))
-		it.connect("interacted", _on_crew_interact.bind(cid))
 
 	_player = CharacterBody3D.new()
 	_player.set_script(preload("res://scripts/player.gd"))
@@ -114,12 +131,10 @@ func _ready() -> void:
 	_bed.set("enabled", false)
 	_bed.connect("interacted", _on_bed)
 
-	# Puerta de salida en la pared trasera. SIEMPRE disponible: cerrar antes de
-	# tiempo penaliza. Caja fina pegada al muro, siempre visible (force_mesh).
-	_door = _make_interactable(
-		Vector3(1.0, 2.05, 0.14), Vector3(0.5, 1.02, 3.86),
-		Color(0.32, 0.22, 0.15), "Salir del puesto", true)
-	_door.connect("interacted", _on_door)
+	# Suelo exterior (colision) y puerta trasera abrible.
+	_add_box(Vector3(300, 0.4, 300), Vector3(0, -0.30, 0), Color(0.5, 0.44, 0.32))
+	_build_door()
+	_spawn_companions()
 
 	call_deferred("_begin")
 
@@ -155,7 +170,9 @@ func _build_room() -> void:
 	_add_box(Vector3(8, 0.2, 8), Vector3(0, 3.0, 0), wall)            # techo
 	_add_box(Vector3(0.2, 3.2, 8), Vector3(-4, 1.5, 0), wall)         # pared oeste
 	_add_box(Vector3(0.2, 3.2, 8), Vector3(4, 1.5, 0), wall)          # pared este
-	_add_box(Vector3(8, 3.2, 0.2), Vector3(0, 1.5, 4), wall)          # pared trasera
+	_add_box(Vector3(3.9, 3.2, 0.2), Vector3(-2.05, 1.5, 4), wall)    # trasera izq
+	_add_box(Vector3(2.9, 3.2, 0.2), Vector3(2.55, 1.5, 4), wall)    # trasera der
+	_add_box(Vector3(1.2, 1.0, 0.2), Vector3(0.5, 2.6, 4), wall)     # dintel puerta
 	_add_box(Vector3(3.3, 3.2, 0.2), Vector3(-2.45, 1.5, -4), wall)   # frontal izq
 	_add_box(Vector3(3.3, 3.2, 0.2), Vector3(2.45, 1.5, -4), wall)    # frontal der
 	_add_box(Vector3(1.7, 1.0, 0.2), Vector3(0, 2.7, -4), wall)       # dintel
@@ -231,6 +248,86 @@ func _make_interactable(size: Vector3, pos: Vector3, color: Color, prompt: Strin
 	body.set("prompt", prompt)
 	add_child(body)
 	return body
+
+
+# ------------------------------------------------------------------ puerta
+func _build_door() -> void:
+	# Pivote (bisagra) en el borde izquierdo del hueco de la pared trasera.
+	_door_pivot = Node3D.new()
+	_door_pivot.position = Vector3(-0.05, 1.02, 3.92)
+	add_child(_door_pivot)
+
+	var leaf := StaticBody3D.new()
+	_door_shape = CollisionShape3D.new()
+	var bs := BoxShape3D.new()
+	bs.size = Vector3(1.05, 1.98, 0.08)
+	_door_shape.shape = bs
+	_door_shape.position = Vector3(0.55, 0.0, 0.0)   # la hoja sale hacia +X del pivote
+	leaf.add_child(_door_shape)
+	var mi := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	bm.size = bs.size
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.34, 0.24, 0.16)
+	mat.roughness = 1.0
+	bm.material = mat
+	mi.mesh = bm
+	mi.position = _door_shape.position
+	leaf.add_child(mi)
+	_door_pivot.add_child(leaf)
+
+	# estado inicial (abierta)
+	_door_shape.disabled = _door_open
+	_door_pivot.rotation_degrees.y = -105.0 if _door_open else 0.0
+
+	# Zona de "E" en el vano, alcanzable desde dentro y desde fuera.
+	var zone := _make_interactable(
+		Vector3(1.5, 2.0, 1.4), Vector3(0.5, 1.0, 3.92),
+		Color(0, 0, 0), "Abrir / cerrar la puerta")
+	zone.connect("interacted", _on_door)
+	_door = zone
+
+
+func _spawn_companions() -> void:
+	var home: Vector3 = WAYPOINTS.get("center", Vector3(0, 0.2, 0))
+	for c in GameState.crew_defs:
+		var cid := str(c.get("id", ""))
+		var body = CharacterBody3D.new()
+		body.set_script(preload("res://scripts/companion.gd"))
+		var col := CollisionShape3D.new()
+		var cap := CapsuleShape3D.new()
+		cap.height = 1.7
+		cap.radius = 0.3
+		col.shape = cap
+		col.position.y = 0.9
+		body.add_child(col)
+
+		var glb := "res://models/crew_%s.glb" % cid
+		if ResourceLoader.exists(glb):
+			var scn = load(glb)
+			body.add_child(scn.instantiate())
+		else:
+			var mi := MeshInstance3D.new()
+			var cm := CapsuleMesh.new()
+			cm.height = 1.7
+			cm.radius = 0.28
+			var m := StandardMaterial3D.new()
+			m.albedo_color = Color(0.22, 0.24, 0.2)
+			cm.material = m
+			mi.mesh = cm
+			mi.position.y = 0.9
+			body.add_child(mi)
+
+		add_child(body)
+		body.global_position = home + Vector3(randf_range(-1.2, 1.2), 0, randf_range(-1.2, 1.2))
+		body.set("prompt", "Hablar con " + GameState.crew_name(cid))
+		body.setup(cid, GameState.crew_def(cid), _player, WAYPOINTS, LINKS, COVER, _companions_active)
+		body.connect("interacted", _on_crew_interact.bind(cid))
+		_companions[cid] = body
+
+
+func _companions_active() -> bool:
+	return _shift_running and not _busy
 
 
 func _on_looked_at(node: Node) -> void:
@@ -309,7 +406,7 @@ func _start_shift() -> void:
 		_hud.set_objective("Atiende la ventanilla — %d en la fila" % GameState.shift_queue.size())
 		_set_exit(false)
 	else:
-		_hud.set_objective("Turno cubierto. Sal por la puerta para terminar.")
+		_hud.set_objective("Turno cubierto. Duerme en la litera para terminar el dia.")
 		_set_exit(true)
 	GameState.save_run()
 	_player.set_movement_enabled(true)
@@ -356,7 +453,7 @@ func _on_window(_p) -> void:
 	if GameState.has_next_encounter():
 		_hud.set_objective("Atiende la ventanilla — %d en la fila" % GameState.shift_queue.size())
 	else:
-		_hud.set_objective("Turno cubierto. Sal por la puerta para terminar.")
+		_hud.set_objective("Turno cubierto. Duerme en la litera para terminar el dia.")
 		_set_exit(true)
 	GameState.save_run()
 	_player.set_movement_enabled(true)
@@ -427,29 +524,15 @@ func _on_bed(_p) -> void:
 	_end_shift()
 
 
-## Puerta: salir cuando quieras. Con fila pendiente, pide confirmacion y penaliza.
+## Puerta trasera: abre/cierra la hoja. No termina el turno (para eso, la litera).
 func _on_door(_p) -> void:
-	if _busy or not _shift_running:
+	if _door_pivot == null:
 		return
-	_busy = true
-	if GameState.has_next_encounter():
-		var n := GameState.shift_queue.size()
-		_player.set_movement_enabled(false)
-		_hud.show_panel("Cerrar el puesto",
-			"Aun quedan %d vehiculos en la fila. Si cierras ahora, arriba lo va a notar y el equipo lo va a resentir." % n,
-			[{"label": "Cerrar y salir", "data": "leave"}, {"label": "Seguir atendiendo", "data": "stay"}])
-		var pick: Variant = await _hud.panel_selected
-		if str(pick) != "leave":
-			_player.set_movement_enabled(true)
-			_busy = false
-			return
-		GameState.close_post_early()
-		_hud.refresh_meters()
-		var fm := GameState.failed_meter()
-		if fm != "":
-			_game_over(fm)
-			return
-	_end_shift()
+	_door_open = not _door_open
+	_door_shape.disabled = _door_open
+	var tw := create_tween()
+	tw.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tw.tween_property(_door_pivot, "rotation_degrees:y", (-105.0 if _door_open else 0.0), 0.5)
 
 
 func _end_shift() -> void:
@@ -644,7 +727,12 @@ func _on_crew_interact(_p, cid: String) -> void:
 	_busy = true
 	_player.set_movement_enabled(false)
 
+	var comp = _companions.get(cid)
+	var caught: bool = comp != null and bool(comp.get("did_shady"))
+
 	var opts: Array = []
+	if caught:
+		opts.append({"label": "Confrontarlo por lo que acabas de ver", "data": {"kind": "confront"}})
 	for o in GameState.crew_talk_options:
 		var cost := int(o.get("cost", 0))
 		var lbl := str(o.get("label", ""))
@@ -666,7 +754,17 @@ func _on_crew_interact(_p, cid: String) -> void:
 
 	if pick is Dictionary and not (pick as Dictionary).is_empty():
 		var p := pick as Dictionary
-		if str(p.get("kind", "")) == "talk":
+		if str(p.get("kind", "")) == "confront":
+			GameState.adjust_trust(cid, -8)
+			GameState.nudge_meter("command_suspicion", -3)
+			if comp != null:
+				comp.set("did_shady", false)
+			_hud.refresh_meters()
+			_hud.show_panel(GameState.crew_name(cid),
+				"Lo agarras del brazo. Suelta lo que se guardo sin decir palabra y no te mira. La confianza se rompe un poco mas.",
+				[{"label": "Continuar", "data": "ok"}])
+			await _hud.panel_selected
+		elif str(p.get("kind", "")) == "talk":
 			var rep := GameState.crew_talk(cid, p.get("opt", {}) as Dictionary)
 			_hud.refresh_meters()
 			_hud.show_panel(str(rep.get("name", "")),

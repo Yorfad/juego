@@ -1,5 +1,5 @@
 {
-  "_comment": "Los 4 companeros del puesto. trust 0-100. start_trust arranca la partida. greed = multiplicador de confianza cuando les pagas. Bandas: >= loyal apoyan y pueden mejorar eventos; <= hostile pueden venderte; en medio, neutros.",
+  "_comment": "Companeros. trust 0-100. Bandas: >= loyal apoyan/informan; <= hostile ocultan cosas y pueden venderte; en medio, neutros. boldness (0..1) = cada cuanto actuan por su cuenta. wander = puntos de ronda (ver world.gd WAYPOINTS). reports = lineas que sueltan al acercarse y saludar. conceal = lo que hacen a escondidas (texto del 'tell' si los pillas). conceal_effect = efecto del acto oculto.",
   "trust_bands": { "loyal": 68, "hostile": 26 },
   "crew": [
     {
@@ -7,28 +7,80 @@
       "name": "Sargento Nava",
       "start_trust": 56,
       "greed": 1.4,
-      "trait": "Veinte anos en la linea. Cinico y tranquilo. Para el, el unico pecado es que te pillen. Si confia en ti, aprieta a los choferes por su cuenta."
+      "boldness": 0.75,
+      "uniform": [0.30, 0.33, 0.25],
+      "trait": "Veinte anos en la linea. Cinico y tranquilo. Para el, el unico pecado es que te pillen. Si confia en ti, aprieta a los choferes por su cuenta.",
+      "wander": ["window", "desk", "center", "door_in", "yard", "gate_w"],
+      "reports": [
+        "Comandante. El furgon de la ruta 12 volvio a pasar. Lo deje en el libro tal cual.",
+        "Sin novedad en la pluma. El del otro lado pregunto por usted; no le di nada.",
+        "Lo del melon quedo arreglado. Nadie va a preguntar por esa carga."
+      ],
+      "conceal": [
+        "se guarda un fajo en el pantalon sin contarlo",
+        "borra una linea del libro con la manga"
+      ],
+      "conceal_effect": { "key": "cash", "min": 20, "max": 45 }
     },
     {
       "id": "robles",
       "name": "Cabo Robles",
       "start_trust": 46,
       "greed": 1.7,
-      "trait": "Joven, endeudado, mano suelta en la caja chica. Si lo cubres te debe la vida; si lo sueltas, habla. Sabe maquillar los libros."
+      "boldness": 0.85,
+      "uniform": [0.27, 0.30, 0.34],
+      "trait": "Joven, endeudado, mano suelta en la caja chica. Si lo cubres te debe la vida; si lo sueltas, habla. Sabe maquillar los libros.",
+      "wander": ["desk", "center", "bunk", "door_in", "yard"],
+      "reports": [
+        "Comandante, cuadre la caja chica. Los numeros estan al centavo.",
+        "Los libros de esta semana estan limpios. Si viene el inspector, tranquilo.",
+        "Le adelante el papeleo del turno. Solo falta que firme."
+      ],
+      "conceal": [
+        "abre la caja chica y saca unos billetes",
+        "cambia una cifra en el informe y sopla la tinta"
+      ],
+      "conceal_effect": { "key": "cash", "min": 25, "max": 55 }
     },
     {
       "id": "pena",
       "name": "Guardia Pena",
       "start_trust": 50,
       "greed": 0.8,
-      "trait": "Callado. Bebe para dormir, reza antes del turno. Aguanta el trabajo sucio pero el miedo lo quiebra: cuando se asusta, comete errores."
+      "boldness": 0.55,
+      "uniform": [0.24, 0.26, 0.22],
+      "trait": "Callado. Bebe para dormir, reza antes del turno. Aguanta el trabajo sucio pero el miedo lo quiebra: cuando se asusta, comete errores.",
+      "wander": ["window", "bunk", "center", "door_in", "yard", "rock"],
+      "reports": [
+        "Comandante... hay un carro parado en la curva desde hace rato. Sin luces. No se movio.",
+        "Rece por el turno. No se ria. Anoche vi algo junto a la pluma y no era una persona.",
+        "Todo en calma por el lado oeste. Demasiada calma."
+      ],
+      "conceal": [
+        "se toma un trago largo a escondidas detras de la caseta",
+        "esconde una botella bajo el colchon de la litera"
+      ],
+      "conceal_effect": { "key": "nerve", "min": 2, "max": 5 }
     },
     {
       "id": "ruiz",
       "name": "Cabo Ruiz",
       "start_trust": 38,
       "greed": 0.5,
-      "trait": "De academia, va de recto, anota todo en una libreta. Podria estar informando a los mandos. Con confianza alta, 'pierde' esas notas."
+      "boldness": 0.9,
+      "uniform": [0.33, 0.34, 0.30],
+      "trait": "De academia, va de recto, anota todo en una libreta. Podria estar informando a los mandos. Con confianza alta, 'pierde' esas notas.",
+      "wander": ["desk", "window", "center", "door_in", "yard", "gate_e"],
+      "reports": [
+        "Comandante, reporto: tres vehiculos sin registrar entre las dos y las tres. Lo anote todo.",
+        "Le recuerdo que el reglamento exige acta por cada requisa. Llevamos dos sin firmar.",
+        "Turno sin incidencias graves. El informe sube a las seis."
+      ],
+      "conceal": [
+        "hace una foto al libro con el telefono",
+        "guarda una nota doblada en el bolsillo interior"
+      ],
+      "conceal_effect": { "key": "command_suspicion", "min": 3, "max": 6 }
     }
   ],
   "talk_options": [

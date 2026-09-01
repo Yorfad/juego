@@ -38,10 +38,11 @@ generadas por código.
 - **Opciones** (menú y pausa): sensibilidad del ratón, invertir eje Y, pantalla
   completa, volumen general. Se guardan en `user://settings.cfg`.
 - **Primera persona:** controlador con cámara, colisión, salto y raycast de interacción.
-- **Escenario:** la caseta (modelo `environment.glb` si existe, si no cajas grises),
-  la ventanilla con hueco real, escritorio, litera y 4 compañeros posados (`crew.glb`).
-- **Exterior:** desierto de noche con carretera, 2 talanqueras animadas, valla de
-  frontera, rocas y plantas como tapavistas (`exterior.glb`).
+- **Escenario:** la caseta (`environment.glb`), ventanilla con hueco real,
+  escritorio, litera y **puerta trasera abrible** (E). El techo tiene un vano
+  atrás por el que se sale al desierto.
+- **Exterior explorable:** suelo con colisión + `exterior.glb` (carretera, 2
+  talanqueras animadas, valla, rocas, mesas). Puedes salir a andar por fuera.
 - **Iluminación de ambiente:** niebla, luna direccional, lámpara cálida por dentro.
 - **Bucle de turno:** te acercas a la ventanilla → pulsas E → un vehículo entra
   por la carretera y para enfrente (puedes mirar, no andar) → panel de decisión
@@ -54,14 +55,22 @@ generadas por código.
   en medio, neutro. La confianza se mueve con: **dinero** (sobre), **trago**,
   **prometer cubrirlo**, **amenaza** (obedece ahora pero baja la confianza), pagar/no
   pagar la nómina, y decisiones concretas en las situaciones (`crew_trust`).
-- **Hablar con un compañero:** durante el turno, mira a uno y pulsa **E**. Puedes hacer
-  las acciones de confianza y darle una **orden** para el resto del turno:
-  *aprieta al próximo* (más mordida, más sospecha), *no hables con nadie hoy* (no te
-  vende), *quítate de en medio* (ni te apoya ni te vende). También en el paso entre
-  turnos.
-- **Puerta trasera:** sales **cuando quieras**. Con vehículos en la fila pide
-  confirmación y penaliza (sospecha + según cuántos queden, lealtad −). Con la
-  fila cubierta, sales sin coste (o duermes en la litera).
+- **Compañeros vivos (`companion.gd`):** son NPCs que rondan puntos dentro y
+  fuera de la caseta (`WAYPOINTS`/`LINKS` en `world.gd`). Cada pocos segundos
+  "deciden" según su confianza:
+  - **leal/neutro** → se acercan a ti, hacen el saludo militar (rotando el brazo)
+    y sueltan un parte (bocadillo `Label3D`); si te confían de sobra, a veces te
+    cubren algo (−sospecha).
+  - **hostil** → se apartan a un rincón **fuera de tu vista** y hacen algo turbio
+    (roban de la caja, falsean el libro, filtran). Si te acercas o los miras
+    (cono de visión + raycast), **disimulan y se van**. Si lo hacen sin que los
+    veas, queda un `did_shady`: al hablarles aparece **"Confrontarlo"**.
+- **Hablar / dar órdenes:** mira a un compañero y **E** (también en el paso entre
+  turnos). Acciones de confianza (sobre / trago / prometer / amenazar) y órdenes
+  del turno (*aprieta al próximo*, *no hables con nadie*, *quítate de en medio*).
+- **Puerta trasera:** **E abre/cierra** la hoja. No termina el turno — es para
+  salir a explorar. El turno se cierra durmiendo en la **litera** (cuando la fila
+  está cubierta).
 - **HUD:** panel de medidores con **barras y color** (verde → ámbar → rojo según
   cerca del límite), panel de equipo con barras de confianza, deltas de la
   decisión como chips coloreados, y transiciones suaves.
@@ -139,13 +148,14 @@ juego/
 │   ├── world.gd               monta escenario + luces + jugador; orquesta el flujo y la pausa
 │   ├── player.gd              controlador en primera persona (auto-ensamblado)
 │   ├── interactable.gd        objeto mirable + "E" (ventanilla, litera)
+│   ├── companion.gd           NPC companero: ronda, decide, informa u oculta cosas
 │   ├── vehicle.gd              mueve un vehiculo en X hasta un punto y avisa al llegar
 │   ├── boom_gate.gd            sube/baja el brazo de una talanquera (tween)
 │   └── hud.gd                 HUD y panel de decisiones (CanvasLayer, por código)
 ├── blender/                   scripts bpy que generan los modelos (ver abajo)
 │   ├── build_environment.py   -> models/environment.glb   (caseta y mobiliario)
 │   ├── build_exterior.py      -> models/exterior.glb      (desierto, carretera, talanqueras)
-│   ├── build_crew.py          -> models/crew.glb          (4 companeros posados)
+│   ├── build_crew.py          -> models/crew_<id>.glb     (un glb por companero; brazo "arm_r" para el saludo)
 │   └── build_vehicles.py      -> models/vehicle_{sedan,pickup,van,truck}.glb
 ├── models/                    .glb generados; world.gd los instancia si existen
 └── data/
@@ -163,7 +173,7 @@ Se generan por script, no a mano. En Blender: pestaña **Scripting** → abrir e
 `.py` de `blender/` → **Run Script** (Alt+P). Cada uno exporta su `.glb` a
 `models/` y guarda un `.blend` para retocar.
 
-`world.gd` instancia `environment.glb`, `exterior.glb`, `crew.glb` y los
+`world.gd` instancia `environment.glb`, `exterior.glb`, `crew_<id>.glb` y los
 `vehicle_*.glb` **si existen**; si falta alguno, el juego cae al greybox (o,
 para un vehiculo, el encuentro sigue solo con texto) y sigue siendo jugable.
 

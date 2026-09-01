@@ -268,6 +268,12 @@ func _apply_effects(effects: Dictionary) -> void:
 		last_deltas[k] = int(last_deltas.get(k, 0)) + v
 
 
+## Empujon suelto a un medidor (lo usan los companeros al actuar por su cuenta).
+func nudge_meter(key: String, delta: int) -> void:
+	meters[key] = int(meters.get(key, 0)) + delta
+	_clamp_meters()
+
+
 func _clamp_meters() -> void:
 	meters["loyalty"] = clampi(int(meters.get("loyalty", 0)), 0, 100)
 	meters["command_suspicion"] = clampi(int(meters.get("command_suspicion", 0)), 0, 100)
