@@ -281,7 +281,7 @@ func _build_door() -> void:
 	_door_pivot.rotation_degrees.y = -105.0 if _door_open else 0.0
 
 	# Zona de "E" en el vano, alcanzable desde dentro y desde fuera.
-	var zone := _make_interactable(
+	var zone = _make_interactable(
 		Vector3(1.5, 2.0, 1.4), Vector3(0.5, 1.0, 3.92),
 		Color(0, 0, 0), "Abrir / cerrar la puerta")
 	zone.connect("interacted", _on_door)
