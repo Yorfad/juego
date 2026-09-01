@@ -170,9 +170,9 @@ func _build_room() -> void:
 	_add_box(Vector3(8, 0.2, 8), Vector3(0, 3.0, 0), wall)            # techo
 	_add_box(Vector3(0.2, 3.2, 8), Vector3(-4, 1.5, 0), wall)         # pared oeste
 	_add_box(Vector3(0.2, 3.2, 8), Vector3(4, 1.5, 0), wall)          # pared este
-	_add_box(Vector3(3.9, 3.2, 0.2), Vector3(-2.05, 1.5, 4), wall)    # trasera izq
-	_add_box(Vector3(2.9, 3.2, 0.2), Vector3(2.55, 1.5, 4), wall)    # trasera der
-	_add_box(Vector3(1.2, 1.0, 0.2), Vector3(0.5, 2.6, 4), wall)     # dintel puerta
+	_add_box(Vector3(3.5, 3.2, 0.2), Vector3(-2.25, 1.5, 4), wall)   # trasera izq  (hueco puerta x[-0.5,1.3])
+	_add_box(Vector3(2.7, 3.2, 0.2), Vector3(2.65, 1.5, 4), wall)   # trasera der
+	_add_box(Vector3(1.8, 1.1, 0.2), Vector3(0.4, 2.65, 4), wall)   # dintel puerta
 	_add_box(Vector3(3.3, 3.2, 0.2), Vector3(-2.45, 1.5, -4), wall)   # frontal izq
 	_add_box(Vector3(3.3, 3.2, 0.2), Vector3(2.45, 1.5, -4), wall)    # frontal der
 	_add_box(Vector3(1.7, 1.0, 0.2), Vector3(0, 2.7, -4), wall)       # dintel
@@ -253,10 +253,9 @@ func _make_interactable(size: Vector3, pos: Vector3, color: Color, prompt: Strin
 # ------------------------------------------------------------------ puerta
 func _build_door() -> void:
 	_door_open = false
-	# Pivote (bisagra) en el borde izquierdo del hueco, un poco DENTRO de la sala
-	# para que la hoja no quede coplanar con la pared (evita el parpadeo).
+	# Pivote (bisagra) en el borde izquierdo del hueco de la pared trasera.
 	_door_pivot = Node3D.new()
-	_door_pivot.position = Vector3(-0.05, 1.02, 3.78)
+	_door_pivot.position = Vector3(-0.45, 1.02, 3.88)
 	add_child(_door_pivot)
 
 	var leaf := StaticBody3D.new()
@@ -264,9 +263,9 @@ func _build_door() -> void:
 	leaf.collision_mask = 0
 	_door_shape = CollisionShape3D.new()
 	var bs := BoxShape3D.new()
-	bs.size = Vector3(1.05, 1.98, 0.07)
+	bs.size = Vector3(1.68, 1.98, 0.07)
 	_door_shape.shape = bs
-	_door_shape.position = Vector3(0.55, 0.0, 0.0)   # la hoja sale hacia +X del pivote
+	_door_shape.position = Vector3(0.85, 0.0, 0.0)   # la hoja sale hacia +X del pivote
 	leaf.add_child(_door_shape)
 	var mi := MeshInstance3D.new()
 	var bm := BoxMesh.new()
@@ -284,8 +283,10 @@ func _build_door() -> void:
 	_door_pivot.rotation.y = 0.0
 
 	var zone = _make_interactable(
-		Vector3(1.6, 2.0, 1.6), Vector3(0.5, 1.0, 3.9),
+		Vector3(1.8, 2.0, 1.8), Vector3(0.5, 1.0, 3.9),
 		Color(0, 0, 0), "Abrir / cerrar la puerta")
+	zone.collision_layer = 2   # capa 2: el rayo de "E" la ve, pero no frena al jugador
+	zone.collision_mask = 0
 	zone.connect("interacted", _on_door)
 	_door = zone
 

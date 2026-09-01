@@ -294,7 +294,7 @@ func _salute(up: bool) -> void:
 	if _arm_r == null:
 		return
 	var tw := create_tween()
-	tw.tween_property(_arm_r, "rotation:x", (deg_to_rad(138.0) if up else 0.0), 0.28)
+	tw.tween_property(_arm_r, "rotation:x", (deg_to_rad(110.0) if up else 0.0), 0.28)
 
 
 # ----------------------------------------------------------------- percepcion

@@ -43,6 +43,7 @@ func _ready() -> void:
 	ray.target_position = Vector3(0.0, 0.0, -2.6)
 	ray.collide_with_bodies = true
 	ray.collide_with_areas = false
+	ray.collision_mask = 1 | 2   # capa 1 (interactuables/companeros) + capa 2 (zona de puerta, que no choca)
 	ray.hit_from_inside = true   # detecta interactuables aunque estes pegado a ellos
 	ray.add_exception(self)
 	camera.add_child(ray)

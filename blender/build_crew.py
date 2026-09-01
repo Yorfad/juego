@@ -87,50 +87,77 @@ def cyl(name, r, h, gl, material):
 
 
 def build_figure(cid, uniform_rgb):
-    U = mat("u_%s" % cid, uniform_rgb)
+    # gbox espera tamano de Godot: (ancho X, ALTO Y, fondo Z).
+    U    = mat("u_%s" % cid, uniform_rgb)
     SKIN = mat("skin", (0.55, 0.42, 0.34))
-    BOOT = mat("boot", (0.09, 0.09, 0.10))
-    DARK = mat("dark", (0.12, 0.12, 0.13))
-    CAP = mat("cap_%s" % cid, (uniform_rgb[0] * 0.65, uniform_rgb[1] * 0.65, uniform_rgb[2] * 0.65))
+    BOOT = mat("boot", (0.08, 0.08, 0.09))
+    BELT = mat("belt", (0.10, 0.09, 0.09))
+    DK   = mat("dk", (0.13, 0.13, 0.14))
+    CAP  = mat("cap_%s" % cid, (uniform_rgb[0] * 0.6, uniform_rgb[1] * 0.6, uniform_rgb[2] * 0.6))
 
     root = bpy.data.objects.new("crew_%s" % cid, None)
     bpy.context.collection.objects.link(root)
 
-    wide = 1.16 if cid == "pena" else 1.0
-    gbox("pelvis", (0.34 * wide, 0.30, 0.22), (0.0, 0.95, 0.0), U)
-    gbox("torso",  (0.42 * wide, 0.26, 0.50), (0.0, 1.35, 0.0), U)
-    gbox("neck",   (0.11, 0.11, 0.10), (0.0, 1.62, 0.0), SKIN)
-    gbox("head",   (0.20, 0.22, 0.22), (0.0, 1.80, -0.02), SKIN)
+    wide = 1.14 if cid == "pena" else 1.0
 
+    # --- piernas (verticales) ---
     for sx in (-1, 1):
-        gbox("leg_%d" % sx,  (0.15, 0.15, 0.92), (sx * 0.10, 0.47, 0.0), U)
-        gbox("boot_%d" % sx, (0.16, 0.28, 0.12), (sx * 0.10, 0.06, -0.05), BOOT)
+        gbox("boot_%d" % sx,  (0.14, 0.13, 0.30), (sx * 0.11, 0.065, -0.05), BOOT)
+        gbox("shin_%d" % sx,  (0.13, 0.44, 0.13), (sx * 0.11, 0.34, 0.0), U)
+        gbox("knee_%d" % sx,  (0.15, 0.10, 0.15), (sx * 0.11, 0.57, 0.0), U)
+        gbox("thigh_%d" % sx, (0.17, 0.40, 0.18), (sx * 0.11, 0.81, 0.0), U)
 
-    gbox("arm_l",  (0.11, 0.11, 0.60), (-0.29, 1.28, 0.0), U)
-    gbox("hand_l", (0.10, 0.10, 0.10), (-0.29, 0.97, 0.0), SKIN)
+    # --- torso ---
+    gbox("hips",   (0.40 * wide, 0.22, 0.25), (0.0, 1.06, 0.0), U)
+    gbox("belt",   (0.44 * wide, 0.07, 0.28), (0.0, 1.15, 0.0), BELT)
+    gbox("buckle", (0.09, 0.07, 0.05), (0.0, 1.15, -0.15), CAP)
+    gbox("waist",  (0.37 * wide, 0.20, 0.23), (0.0, 1.29, 0.0), U)
+    gbox("chest",  (0.46 * wide, 0.30, 0.26), (0.0, 1.51, 0.0), U)
+    gbox("pkt_l",  (0.12, 0.11, 0.03), (-0.14, 1.50, -0.14), CAP)
+    gbox("pkt_r",  (0.12, 0.11, 0.03), (0.14, 1.50, -0.14), CAP)
+    gbox("collar", (0.31, 0.08, 0.25), (0.0, 1.67, 0.0), CAP)
 
-    # brazo derecho: pivote (Empty) en el hombro, malla colgando -> saludo
+    # --- cabeza ---
+    gbox("neck", (0.10, 0.10, 0.10), (0.0, 1.71, 0.0), SKIN)
+    gbox("head", (0.19, 0.23, 0.21), (0.0, 1.84, -0.01), SKIN)
+    gbox("nose", (0.05, 0.05, 0.06), (0.0, 1.83, -0.12), SKIN)
+
+    # --- hombros + brazo izquierdo (fijo) ---
+    for sx in (-1, 1):
+        gbox("shldr_%d" % sx, (0.16, 0.11, 0.19), (sx * 0.29, 1.61, 0.0), U)
+    gbox("uarm_l", (0.11, 0.33, 0.12), (-0.31, 1.43, 0.0), U)
+    gbox("elbo_l", (0.10, 0.09, 0.10), (-0.31, 1.25, 0.0), U)
+    gbox("farm_l", (0.10, 0.30, 0.11), (-0.31, 1.08, 0.02), U)
+    gbox("hand_l", (0.09, 0.10, 0.12), (-0.31, 0.90, 0.03), SKIN)
+
+    # --- brazo derecho: pivote (Empty) en el hombro -> saludo ---
     ar = bpy.data.objects.new("arm_r", None)
     bpy.context.collection.objects.link(ar)
-    ar.location = gloc(0.29, 1.56, 0.0)
-    am = gbox("arm_r_mesh", (0.11, 0.11, 0.58), (0.29, 1.27, 0.0), U)
-    ah = gbox("hand_r", (0.10, 0.10, 0.10), (0.29, 0.98, 0.0), SKIN)
+    ar.location = gloc(0.31, 1.59, 0.0)
+    parts_r = [
+        gbox("uarm_r", (0.11, 0.33, 0.12), (0.31, 1.43, 0.0), U),
+        gbox("elbo_r", (0.10, 0.09, 0.10), (0.31, 1.25, 0.0), U),
+        gbox("farm_r", (0.10, 0.30, 0.11), (0.31, 1.08, 0.02), U),
+        gbox("hand_r", (0.09, 0.10, 0.12), (0.31, 0.90, 0.03), SKIN),
+    ]
     bpy.context.view_layer.update()
-    for ch in (am, ah):
+    for ch in parts_r:
         ch.parent = ar
         ch.matrix_parent_inverse = ar.matrix_world.inverted()
     _created.append(ar)
 
+    # --- props por persona ---
     if cid in ("nava", "ruiz"):
-        gbox("cap_top",  (0.21, 0.22, 0.11), (0.0, 1.96, 0.0), CAP)
-        gbox("cap_brim", (0.24, 0.34, 0.04), (0.0, 1.91, -0.13), CAP)
+        gbox("cap_top",  (0.21, 0.11, 0.22), (0.0, 2.00, 0.0), CAP)
+        gbox("cap_peak", (0.22, 0.03, 0.13), (0.0, 1.965, -0.16), CAP)
     if cid == "robles":
-        gbox("collar", (0.30, 0.10, 0.28), (0.0, 1.56, 0.0), DARK)
+        gbox("beanie", (0.20, 0.12, 0.21), (0.0, 1.98, 0.0), DK)
     if cid == "pena":
-        gbox("belly", (0.40, 0.32, 0.24), (0.0, 1.12, -0.03), U)
-        cyl("bottle", 0.04, 0.20, (0.30, 1.00, -0.12), DARK)
+        gbox("belly",  (0.46, 0.28, 0.32), (0.0, 1.31, 0.02), U)
+        cyl("bottle", 0.037, 0.19, (0.34, 1.00, 0.08), DK)
     if cid == "ruiz":
-        gbox("clipboard", (0.24, 0.02, 0.30), (0.0, 1.24, -0.20), DARK)
+        gbox("clipbd", (0.24, 0.30, 0.02), (0.0, 1.25, -0.19), DK)
+        gbox("clip",   (0.11, 0.03, 0.03), (0.0, 1.39, -0.20), CAP)
 
     for o in _created:
         if o.parent is None and o is not root:
