@@ -1,0 +1,20 @@
+# Godot 4
+.godot/
+.import/
+export/
+export_presets.cfg
+*.tmp
+
+# Blender
+*.blend1
+*.blend2
+
+# Editores / herramientas
+.qodo/
+.vscode/
+.idea/
+*.code-workspace
+
+# SO
+Thumbs.db
+.DS_Store

@@ -1,0 +1,12 @@
+# Normaliza saltos de linea a LF en el repo (evita ruido CRLF entre PCs)
+* text=auto eol=lf
+
+# Binarios: que git no los toque
+*.glb   binary
+*.blend binary
+*.png   binary
+*.jpg   binary
+*.ttf   binary
+*.otf   binary
+*.wav   binary
+*.ogg   binary

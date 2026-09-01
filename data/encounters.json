@@ -1,0 +1,440 @@
+{
+  "_comment": "Cada situacion: id, speaker, text, day_min, weight, once (opcional), vehicle (sedan|pickup|van|truck; por defecto sedan). Cada choice: label, result, is_bribe (opcional), gate_action ('pass' por defecto | 'deny' = el vehiculo retrocede), effects{cash,loyalty,command_suspicion,cartel_pressure,nerve}. Ganchos de equipo (opcionales): crew_trust{id:delta} confianza que da/quita la eleccion; crew_assist{id,min_trust,result,effects} un companero leal mejora el resultado; crew_betray{id,max_trust,result,effects} uno hostil (o mal amenazado) te vende.",
+  "encounters": [
+    {
+      "id": "melon_truck",
+      "speaker": "Chofer sudoroso",
+      "text": "Un trailer cargado de melones para en la ventanilla. El chofer no te mira. Golpeas una caja del fondo y suena hueca.",
+      "day_min": 1,
+      "weight": 12,
+      "vehicle": "truck",
+      "choices": [
+        {
+          "label": "Dejarlo pasar sin revisar mas",
+          "result": "El chofer te guina un ojo al arrancar. Alguien, en algun lado, queda contento contigo.",
+          "effects": { "cartel_pressure": -8, "command_suspicion": 5, "nerve": -3 }
+        },
+        {
+          "label": "Requisar toda la carga y levantar acta",
+          "result": "Veinte kilos entre los melones. Tu informe va a incomodar a mucha gente por encima de ti.",
+          "gate_action": "deny",
+          "effects": { "command_suspicion": 11, "cartel_pressure": 14, "nerve": -2 }
+        },
+        {
+          "label": "Aceptar el sobre ($300) y no haber visto nada",
+          "result": "Guardas el sobre en el cajon. Te sientes sucio y aliviado a la vez.",
+          "is_bribe": true,
+          "effects": { "cash": 300, "cartel_pressure": -10, "command_suspicion": 6, "nerve": -6 },
+          "crew_assist": {
+            "id": "nava",
+            "min_trust": 60,
+            "result": "Nava se acerca sin que se lo pidas, golpea otra caja y le dice al chofer que la proxima venga mejor cerrada. El hombre suelta cien mas.",
+            "effects": { "cash": 100, "command_suspicion": -3 }
+          }
+        }
+      ]
+    },
+    {
+      "id": "tourist_papers",
+      "speaker": "Viajero con prisa",
+      "text": "Un sedan con matricula de fuera. El conductor tiene el permiso vencido por dos dias y deja ochenta dolares doblados sobre la repisa.",
+      "day_min": 1,
+      "weight": 10,
+      "vehicle": "sedan",
+      "choices": [
+        {
+          "label": "Cobrar la multa oficial y dejarlo pasar",
+          "result": "Paga la multa a reganadientes. Todo en regla.",
+          "effects": { "cash": 40 }
+        },
+        {
+          "label": "Quedarte los ochenta y sellar el permiso",
+          "result": "Un billete mas para el cajon.",
+          "is_bribe": true,
+          "effects": { "cash": 80, "command_suspicion": 3 },
+          "crew_betray": {
+            "id": "ruiz",
+            "max_trust": 30,
+            "result": "Ruiz anota la hora y la matricula en su libreta. No dice nada. No hace falta.",
+            "effects": { "command_suspicion": 8 }
+          }
+        },
+        {
+          "label": "Negarle el paso segun el reglamento",
+          "result": "Se va maldiciendo. Hiciste tu trabajo.",
+          "gate_action": "deny",
+          "effects": { "nerve": -2, "command_suspicion": 1 }
+        }
+      ]
+    },
+    {
+      "id": "expired_family",
+      "speaker": "Padre de familia",
+      "text": "Un familiar viejo, cargado hasta el techo. Todos los papeles en regla. Pero Nava, a tu lado, te hace senas: los marco para 'tramite especial' y espera su tajada.",
+      "day_min": 1,
+      "weight": 9,
+      "vehicle": "sedan",
+      "choices": [
+        {
+          "label": "Dejarlos pasar limpiamente y frenar a Nava",
+          "result": "La familia cruza sin pagar de mas. Nava aprieta la mandibula y se aparta.",
+          "effects": { "command_suspicion": 6, "nerve": 4 },
+          "crew_trust": { "nava": -10 }
+        },
+        {
+          "label": "Cobrarles $120 de 'tramite' y repartir con Nava",
+          "result": "Pagan en silencio. La nina del asiento de atras te mira fijo mientras cuentas.",
+          "is_bribe": true,
+          "effects": { "cash": 90, "nerve": -8 },
+          "crew_trust": { "nava": 8 }
+        },
+        {
+          "label": "Mirar a otro lado mientras Nava los exprime",
+          "result": "No tocaste el dinero, pero lo escuchaste todo desde tu silla.",
+          "effects": { "nerve": -10 },
+          "crew_trust": { "nava": 5 }
+        }
+      ]
+    },
+    {
+      "id": "command_blue_truck",
+      "speaker": "Enviado de los mandos",
+      "text": "Un sedan negro sin placas. Baja la ventanilla un hombre de traje. 'Esta noche cruza un trailer azul a las 3:00. Usted estara en el bano. Nos entendemos.'",
+      "day_min": 2,
+      "weight": 8,
+      "once": true,
+      "vehicle": "sedan",
+      "choices": [
+        {
+          "label": "Estar en el bano a las 3:00, como se pidio",
+          "result": "El trailer azul pasa sin registro. Tu nombre queda en una lista buena.",
+          "effects": { "command_suspicion": -14, "cartel_pressure": -6, "nerve": -8 }
+        },
+        {
+          "label": "Fingir que no entendiste el mensaje",
+          "result": "El hombre te mira largo rato antes de subir la ventanilla. 'Pienselo mejor, comandante.'",
+          "gate_action": "deny",
+          "effects": { "command_suspicion": 12 }
+        },
+        {
+          "label": "Grabar la conversacion con el telefono",
+          "result": "Tienes algo guardado. Un seguro... o una bomba con tu nombre.",
+          "effects": { "command_suspicion": 6, "nerve": -4 }
+        }
+      ]
+    },
+    {
+      "id": "rival_officer",
+      "speaker": "Oficial de la frontera contraria",
+      "text": "Una pickup con el uniforme del otro lado. El oficial se apoya en la ventanilla, sonrisa ancha. 'Seamos amigos. Quinientos a la semana por coordinar los horarios. Todos ganan.'",
+      "day_min": 2,
+      "weight": 8,
+      "vehicle": "pickup",
+      "choices": [
+        {
+          "label": "Aceptar el arreglo semanal",
+          "result": "Se dan la mano por encima de la linea. Ahora hay dos ejercitos que pueden hundirte.",
+          "is_bribe": true,
+          "effects": { "cash": 500, "cartel_pressure": -8, "command_suspicion": 10, "nerve": -5 }
+        },
+        {
+          "label": "Rechazar con cortesia",
+          "result": "'Lastima.' Arranca. Al otro lado empiezan a hacerte esperar en cada gestion.",
+          "gate_action": "deny",
+          "effects": { "cartel_pressure": 8 }
+        },
+        {
+          "label": "Reportar el contacto a tus mandos",
+          "result": "Tus jefes toman nota. El otro lado se entera de quien hablo.",
+          "gate_action": "deny",
+          "effects": { "command_suspicion": -6, "cartel_pressure": 12, "nerve": -3 }
+        }
+      ]
+    },
+    {
+      "id": "sicario_photo",
+      "speaker": "Hombre tranquilo",
+      "text": "Un sedan gris. El pasajero baja el cristal y deja una fotografia sobre la repisa: tu hija saliendo de la escuela. 'Solo queremos que la noche del jueves mire para otro lado.'",
+      "day_min": 2,
+      "weight": 9,
+      "vehicle": "sedan",
+      "choices": [
+        {
+          "label": "Prometer que el jueves no habra registro",
+          "result": "Recoge la foto y el sedan se aleja despacio. No vas a dormir esta semana.",
+          "effects": { "cartel_pressure": -14, "command_suspicion": 8, "nerve": -10 }
+        },
+        {
+          "label": "Llamar de inmediato a tu comandancia",
+          "result": "Mandan una patrulla que llega tarde y se va rapido. El mensaje quedo claro para ambos lados.",
+          "gate_action": "deny",
+          "effects": { "cartel_pressure": 10, "loyalty": -4, "nerve": -6 }
+        },
+        {
+          "label": "No reaccionar delante de el",
+          "result": "Mantienes la cara quieta hasta que arrancan. Por dentro no.",
+          "effects": { "nerve": -14, "cartel_pressure": -2 },
+          "crew_betray": {
+            "id": "pena",
+            "max_trust": 30,
+            "result": "Pena, blanco como el papel, suelta delante del sedan que a tu hija la llevan en la ruta 12. Ahora saben mas que antes.",
+            "effects": { "cartel_pressure": -4, "nerve": -6 }
+          }
+        }
+      ]
+    },
+    {
+      "id": "internal_inspector",
+      "speaker": "Inspector interno",
+      "text": "Un sedan oficial. El inspector baja con una carpeta a revisar tu caja chica y los informes de la semana. Pide un cafe y se sienta.",
+      "day_min": 3,
+      "weight": 7,
+      "once": true,
+      "vehicle": "sedan",
+      "choices": [
+        {
+          "label": "Deslizarle $400 con el expediente",
+          "result": "Guarda el sobre sin mirarlo. 'Todo en orden, comandante.'",
+          "effects": { "cash": -400, "command_suspicion": -10, "nerve": -4 }
+        },
+        {
+          "label": "Colaborar y abrir todo",
+          "result": "Revisa cuatro horas. Se va sin decir si encontro algo. Eso es peor que un grito.",
+          "effects": { "command_suspicion": 6, "nerve": -3 },
+          "crew_assist": {
+            "id": "robles",
+            "min_trust": 62,
+            "result": "Robles ya habia cuadrado los libros la noche anterior 'por si acaso'. El inspector no encuentra nada.",
+            "effects": { "command_suspicion": -9 }
+          }
+        },
+        {
+          "label": "Enterrarlo en papeleo y turnos cruzados",
+          "result": "Se va molesto y con las manos vacias. Volvera con ganas.",
+          "effects": { "command_suspicion": 4, "nerve": -1 }
+        }
+      ]
+    },
+    {
+      "id": "weapons_crate",
+      "speaker": "Chofer nocturno",
+      "text": "Un furgon cerrado. Por la ventanilla ves cajas largas de madera, bien claveteadas. 'Es material de los de arriba, comandante. Usted no quiere abrir esto.'",
+      "day_min": 3,
+      "weight": 8,
+      "vehicle": "van",
+      "choices": [
+        {
+          "label": "Dejarlo pasar sin abrir",
+          "result": "El furgon cruza. Prefieres no saber hacia donde va.",
+          "effects": { "command_suspicion": -6, "cartel_pressure": -6, "nerve": -6 }
+        },
+        {
+          "label": "Abrir y requisar todo",
+          "result": "Fusiles nuevos, sin registro. Tu acta va a llegar a manos que no perdonan.",
+          "gate_action": "deny",
+          "effects": { "command_suspicion": 16, "cartel_pressure": 10 }
+        },
+        {
+          "label": "Quedarte dos cajas y dejar pasar el resto",
+          "result": "Escondes dos cajas en la bodega. Un dia valdran algo. O te condenaran.",
+          "is_bribe": true,
+          "effects": { "cash": 250, "command_suspicion": -2, "cartel_pressure": -2, "nerve": -5 }
+        }
+      ]
+    },
+    {
+      "id": "patrol_wave",
+      "speaker": "Sargento de la patrulla",
+      "text": "Una pickup de tu propia comandancia. El sargento no baja. 'Comandante, a las cuatro cruza un carro sin placas. No lo anote. Ordenes de arriba, no mias.'",
+      "day_min": 2,
+      "weight": 8,
+      "vehicle": "pickup",
+      "choices": [
+        {
+          "label": "Entendido. No habra registro a las cuatro",
+          "result": "La pickup se va. A las cuatro pasa un carro oscuro y tu mano no se mueve hacia el libro.",
+          "effects": { "command_suspicion": -8, "cartel_pressure": -4, "nerve": -6 },
+          "crew_trust": { "nava": 6, "ruiz": -6 }
+        },
+        {
+          "label": "Pedir la orden por escrito",
+          "result": "'Usted sabra.' Arranca. A las cuatro no pasa nada, pero alguien anoto que preguntaste.",
+          "effects": { "command_suspicion": 7, "nerve": -2 },
+          "crew_trust": { "ruiz": 6, "nava": -4 }
+        }
+      ]
+    },
+    {
+      "id": "prisoner_van",
+      "speaker": "Traslado de detenidos",
+      "text": "Un furgon con rejas. Mientras revisas la orden, un hombre esposado en la parte de atras susurra, sin levantar la cabeza, tu nombre completo. Y el de tu madre. Nadie aqui los sabe.",
+      "day_min": 1,
+      "weight": 7,
+      "vehicle": "van",
+      "choices": [
+        {
+          "label": "Sellar la orden y mandarlo seguir",
+          "result": "El furgon arranca. Lo oyes susurrar hasta que el motor lo tapa.",
+          "effects": { "nerve": -8 }
+        },
+        {
+          "label": "Bajar y mirarlo a la cara",
+          "result": "Levanta la vista. Te sonrie apenas. Tiene los ojos de alguien que ya sabe como termina esto.",
+          "effects": { "nerve": -12, "command_suspicion": 2 }
+        },
+        {
+          "label": "Rezar en voz baja frente al furgon",
+          "result": "Se calla de golpe. El chofer te mira raro y acelera.",
+          "effects": { "nerve": -3 },
+          "crew_trust": { "pena": 6 }
+        }
+      ]
+    },
+    {
+      "id": "ghost_sedan",
+      "speaker": "Junto a la pluma",
+      "text": "A las cuatro de la manana entra despacio el sedan que rechazaste el turno pasado, el del hombre que aparecio muerto en el desierto dos dias despues. Los faros encendidos. Nadie al volante.",
+      "day_min": 2,
+      "weight": 6,
+      "vehicle": "sedan",
+      "choices": [
+        {
+          "label": "Persignarte y subir la pluma",
+          "result": "El sedan cruza solo, sin acelerar, y se pierde en la oscuridad. El frio se queda un rato mas.",
+          "effects": { "nerve": -5 }
+        },
+        {
+          "label": "Acercarte a mirar dentro",
+          "result": "El asiento del conductor esta hundido, como si alguien acabara de levantarse. Huele a arena caliente.",
+          "effects": { "nerve": -12 }
+        },
+        {
+          "label": "Gritarle que se largue",
+          "result": "Tus hombres te encuentran gritandole a un coche vacio. No dicen nada, pero se miran entre ellos.",
+          "effects": { "nerve": -7 },
+          "crew_trust": { "ruiz": -5, "pena": -3 }
+        }
+      ]
+    },
+    {
+      "id": "broke_migrant",
+      "speaker": "Conductor agotado",
+      "text": "Un sedan que apenas arranca. Dentro, una familia. El permiso vencio hace tres semanas y no traen con que pagar la multa. El hombre te ofrece el reloj.",
+      "day_min": 1,
+      "weight": 8,
+      "vehicle": "sedan",
+      "choices": [
+        {
+          "label": "Dejarlos pasar y no anotar nada",
+          "result": "Cruzan en silencio. La mujer te aprieta el brazo por la ventanilla al pasar.",
+          "effects": { "command_suspicion": 7, "nerve": 3 },
+          "crew_trust": { "pena": 5 }
+        },
+        {
+          "label": "Detenerlos segun el reglamento",
+          "result": "Llegan las camionetas. No miras cuando se los llevan.",
+          "gate_action": "deny",
+          "effects": { "nerve": -8 }
+        },
+        {
+          "label": "Cobrarles el reloj y lo que lleven encima",
+          "result": "Juntan cuarenta dolares y el reloj. Cuentas el dinero dos veces para no pensar.",
+          "is_bribe": true,
+          "effects": { "cash": 60, "nerve": -10 },
+          "crew_trust": { "pena": -6 }
+        }
+      ]
+    },
+    {
+      "id": "priest_sedan",
+      "speaker": "Sacerdote de paso",
+      "text": "Un sedan viejo que traquetea. Baja el cristal un cura mayor, te mira las ojeras y ofrece confesion rapida ahi mismo, sin bajarse.",
+      "day_min": 1,
+      "weight": 6,
+      "vehicle": "sedan",
+      "choices": [
+        {
+          "label": "Confesarte por la ventanilla",
+          "result": "Hablas diez minutos con el motor al ralenti. Cuando arranca, respiras distinto.",
+          "effects": { "nerve": 12 }
+        },
+        {
+          "label": "Pedir solo una bendicion para el puesto",
+          "result": "Traza una cruz en el aire hacia la pluma y sigue su camino.",
+          "effects": { "nerve": 6 }
+        },
+        {
+          "label": "Despacharlo rapido, hay fila",
+          "result": "Sube el cristal sin insistir. 'Aqui estare, hijo.'",
+          "effects": { "nerve": -1 }
+        }
+      ]
+    },
+    {
+      "id": "packed_van",
+      "speaker": "Chofer nervioso",
+      "text": "Una van con las ventanas empanadas. Dentro, una docena de personas apretadas. Hay ninos y una mujer embarazada. Ningun papel. El reglamento dice detener y entregar.",
+      "day_min": 2,
+      "weight": 8,
+      "vehicle": "van",
+      "choices": [
+        {
+          "label": "Dejarla pasar y no anotar nada",
+          "result": "La van cruza rapido y en silencio. Alguien dentro llora bajito.",
+          "effects": { "command_suspicion": 8, "nerve": 3, "cartel_pressure": 2 }
+        },
+        {
+          "label": "Detenerla segun el reglamento",
+          "result": "Llegan las camionetas. Los bajan a todos en fila. No cuentas cuantos.",
+          "gate_action": "deny",
+          "effects": { "nerve": -10 }
+        },
+        {
+          "label": "Cobrar $50 por cabeza para dejarla cruzar",
+          "result": "Juntan lo que pueden entre todos. El chofer te pasa un fajo arrugado por la ventanilla.",
+          "is_bribe": true,
+          "effects": { "cash": 350, "nerve": -10 },
+          "crew_betray": {
+            "id": "ruiz",
+            "max_trust": 32,
+            "result": "Ruiz cuenta las cabezas en voz alta mientras cruzan. Manana ese numero estara en un informe.",
+            "effects": { "command_suspicion": 9 }
+          }
+        }
+      ]
+    },
+    {
+      "id": "night_ambulance",
+      "speaker": "Conductor de ambulancia",
+      "text": "Una ambulancia sin sirena. El conductor suda y no trae hoja de paciente. Las puertas de atras van con cadena y candado.",
+      "day_min": 3,
+      "weight": 7,
+      "vehicle": "van",
+      "choices": [
+        {
+          "label": "Dejarla pasar, es una emergencia",
+          "result": "Arranca antes de que termines la frase. No hubo ninguna emergencia.",
+          "effects": { "cartel_pressure": -8, "command_suspicion": 6, "nerve": -5 },
+          "crew_betray": {
+            "id": "ruiz",
+            "max_trust": 32,
+            "result": "Ruiz apunta la matricula y la hora. 'Por si preguntan', dice. Y van a preguntar.",
+            "effects": { "command_suspicion": 8 }
+          }
+        },
+        {
+          "label": "Exigir que abran las puertas de atras",
+          "result": "El candado tarda una eternidad. Dentro no hay camilla: hay cajas. El chofer ya no suda, ahora esta quieto.",
+          "gate_action": "deny",
+          "effects": { "command_suspicion": 4, "cartel_pressure": 12, "nerve": -6 }
+        },
+        {
+          "label": "Cobrar $200 y no abrir nada",
+          "result": "Paga rapido y se va mas rapido.",
+          "is_bribe": true,
+          "effects": { "cash": 200, "cartel_pressure": -6, "command_suspicion": 5, "nerve": -4 }
+        }
+      ]
+    }
+  ]
+}

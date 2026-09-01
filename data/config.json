@@ -1,0 +1,30 @@
+{
+  "total_days": 5,
+  "base_encounters": 7,
+  "encounters_per_day": 2,
+
+  "team_size": 4,
+  "wage_per_member": 55,
+  "paid_loyalty_bonus": 4,
+  "unpaid_loyalty_penalty": 18,
+
+  "clean_shift_suspicion": 8,
+  "passive_cartel_per_day": 3,
+
+  "start_meters": {
+    "cash": 480,
+    "loyalty": 60,
+    "command_suspicion": 18,
+    "cartel_pressure": 10,
+    "nerve": 80
+  },
+
+  "loyalty_reset_days": { "3": 45 },
+
+  "relief_options": [
+    { "label": "Ir a misa al pueblo", "cost": 40, "nerve": 14 },
+    { "label": "Rezar en el cuarto de guardia", "cost": 0, "nerve": 6 },
+    { "label": "Comprar un amuleto al vendedor del pueblo", "cost": 110, "nerve": 24 },
+    { "label": "Beber hasta quedarte dormido", "cost": 25, "nerve": 9 }
+  ]
+}
