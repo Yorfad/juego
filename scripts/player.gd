@@ -24,6 +24,8 @@ var _target: Node = null
 
 
 func _ready() -> void:
+	collision_mask = 1 | 8   # paredes/suelo (1) + la hoja de la puerta (capa 4)
+
 	var col := CollisionShape3D.new()
 	var cap := CapsuleShape3D.new()
 	cap.height = 1.8

@@ -56,7 +56,7 @@ const COVER := ["desk", "bunk", "rock", "yard", "gate_w"]
 var _companions := {}      # id -> CharacterBody3D (companion.gd)
 var _door_pivot: Node3D
 var _door_shape: CollisionShape3D
-var _door_open := true      # empieza abierta para que el equipo entre y salga
+var _door_open := false
 
 # --- trafico -----------------------------------------------------------
 # Todo el trafico llega SIEMPRE desde el oeste, por el carril cercano a la
@@ -252,15 +252,19 @@ func _make_interactable(size: Vector3, pos: Vector3, color: Color, prompt: Strin
 
 # ------------------------------------------------------------------ puerta
 func _build_door() -> void:
-	# Pivote (bisagra) en el borde izquierdo del hueco de la pared trasera.
+	_door_open = false
+	# Pivote (bisagra) en el borde izquierdo del hueco, un poco DENTRO de la sala
+	# para que la hoja no quede coplanar con la pared (evita el parpadeo).
 	_door_pivot = Node3D.new()
-	_door_pivot.position = Vector3(-0.05, 1.02, 3.92)
+	_door_pivot.position = Vector3(-0.05, 1.02, 3.78)
 	add_child(_door_pivot)
 
 	var leaf := StaticBody3D.new()
+	leaf.collision_layer = 8   # capa 4: solo el jugador la choca; los companeros la ignoran
+	leaf.collision_mask = 0
 	_door_shape = CollisionShape3D.new()
 	var bs := BoxShape3D.new()
-	bs.size = Vector3(1.05, 1.98, 0.08)
+	bs.size = Vector3(1.05, 1.98, 0.07)
 	_door_shape.shape = bs
 	_door_shape.position = Vector3(0.55, 0.0, 0.0)   # la hoja sale hacia +X del pivote
 	leaf.add_child(_door_shape)
@@ -268,7 +272,7 @@ func _build_door() -> void:
 	var bm := BoxMesh.new()
 	bm.size = bs.size
 	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.34, 0.24, 0.16)
+	mat.albedo_color = Color(0.36, 0.25, 0.16)
 	mat.roughness = 1.0
 	bm.material = mat
 	mi.mesh = bm
@@ -276,13 +280,11 @@ func _build_door() -> void:
 	leaf.add_child(mi)
 	_door_pivot.add_child(leaf)
 
-	# estado inicial (abierta)
 	_door_shape.disabled = _door_open
-	_door_pivot.rotation_degrees.y = -105.0 if _door_open else 0.0
+	_door_pivot.rotation.y = 0.0
 
-	# Zona de "E" en el vano, alcanzable desde dentro y desde fuera.
 	var zone = _make_interactable(
-		Vector3(1.5, 2.0, 1.4), Vector3(0.5, 1.0, 3.92),
+		Vector3(1.6, 2.0, 1.6), Vector3(0.5, 1.0, 3.9),
 		Color(0, 0, 0), "Abrir / cerrar la puerta")
 	zone.connect("interacted", _on_door)
 	_door = zone
@@ -321,13 +323,19 @@ func _spawn_companions() -> void:
 		add_child(body)
 		body.global_position = home + Vector3(randf_range(-1.2, 1.2), 0, randf_range(-1.2, 1.2))
 		body.set("prompt", "Hablar con " + GameState.crew_name(cid))
-		body.setup(cid, GameState.crew_def(cid), _player, WAYPOINTS, LINKS, COVER, _companions_active)
+		body.setup(cid, GameState.crew_def(cid), _player, WAYPOINTS, LINKS, COVER,
+			_companions_active, _on_companion_notice)
 		body.connect("interacted", _on_crew_interact.bind(cid))
 		_companions[cid] = body
 
 
 func _companions_active() -> bool:
 	return _shift_running and not _busy
+
+
+func _on_companion_notice(t: String) -> void:
+	if _hud != null:
+		_hud.toast(t)
 
 
 func _on_looked_at(node: Node) -> void:
@@ -531,8 +539,8 @@ func _on_door(_p) -> void:
 	_door_open = not _door_open
 	_door_shape.disabled = _door_open
 	var tw := create_tween()
-	tw.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	tw.tween_property(_door_pivot, "rotation_degrees:y", (-105.0 if _door_open else 0.0), 0.5)
+	tw.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tw.tween_property(_door_pivot, "rotation:y", (deg_to_rad(-100.0) if _door_open else 0.0), 0.45)
 
 
 func _end_shift() -> void:

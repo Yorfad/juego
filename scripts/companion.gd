@@ -36,13 +36,14 @@ var _path: Array = []
 var _here := "center"
 var _think_t := 3.0
 var _state_t := 0.0
-var _bubble: Label3D
-var _bubble_t := 0.0
+var _label: Label3D          # rotulo persistente: "<Nombre> · <estado>" o la frase del parte
+var _say_t := 0.0
 var _arm_r: Node3D
+var _notify := Callable()    # world.gd: mostrar un aviso (toast)
 
 
 func setup(cid: String, cdef: Dictionary, player, wp: Dictionary,
-		links: Dictionary, cover: Array, active_cb: Callable) -> void:
+		links: Dictionary, cover: Array, active_cb: Callable, notify_cb: Callable) -> void:
 	id = cid
 	def = cdef
 	boldness = float(cdef.get("boldness", 0.6))
@@ -51,21 +52,22 @@ func setup(cid: String, cdef: Dictionary, player, wp: Dictionary,
 	_links = links
 	_cover = cover
 	_active = active_cb
+	_notify = notify_cb
 	_arm_r = find_child("arm_r", true, false)
 	_here = _nearest_wp()
-	_think_t = randf_range(4.0, 10.0)
+	_think_t = randf_range(1.5, 4.0)
+	_refresh_label()
 
 
 func _ready() -> void:
-	_bubble = Label3D.new()
-	_bubble.position.y = 2.15
-	_bubble.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_bubble.font_size = 42
-	_bubble.outline_size = 10
-	_bubble.pixel_size = 0.0033
-	_bubble.modulate = Color(0.96, 0.93, 0.82)
-	_bubble.visible = false
-	add_child(_bubble)
+	_label = Label3D.new()
+	_label.position.y = 2.25
+	_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_label.font_size = 34
+	_label.outline_size = 9
+	_label.pixel_size = 0.0032
+	_label.modulate = Color(0.9, 0.88, 0.82)
+	add_child(_label)
 
 
 func interact(player) -> void:
@@ -74,11 +76,40 @@ func interact(player) -> void:
 
 
 func say(text: String, seconds: float) -> void:
-	if _bubble == null:
+	if _label == null:
 		return
-	_bubble.text = text
-	_bubble.visible = true
-	_bubble_t = seconds
+	_label.text = text
+	_label.modulate = Color(1.0, 0.95, 0.78)
+	_say_t = seconds
+
+
+func _notify_toast(t: String) -> void:
+	if _notify.is_valid():
+		_notify.call(t)
+
+
+func _refresh_label() -> void:
+	if _label == null or _say_t > 0.0:
+		return
+	_label.text = "%s · %s" % [GameState.crew_name(id), _state_word()]
+	_label.modulate = _state_color()
+
+
+func _state_word() -> String:
+	if _state == St.APPROACH or _state == St.REPORT:
+		return "te busca"
+	if _state == St.SNEAK or _state == St.CONCEAL:
+		return "se aparta"
+	return "en ronda"
+
+
+func _state_color() -> Color:
+	var b := band()
+	if b == "hostile":
+		return Color(0.92, 0.55, 0.5)
+	if b == "loyal":
+		return Color(0.6, 0.86, 0.62)
+	return Color(0.82, 0.82, 0.88)
 
 
 func band() -> String:
@@ -87,10 +118,10 @@ func band() -> String:
 
 # --------------------------------------------------------------------- loop
 func _physics_process(delta: float) -> void:
-	if _bubble_t > 0.0:
-		_bubble_t -= delta
-		if _bubble_t <= 0.0 and _bubble != null:
-			_bubble.visible = false
+	if _say_t > 0.0:
+		_say_t -= delta
+		if _say_t <= 0.0:
+			_refresh_label()
 
 	if not is_on_floor():
 		velocity.y -= GRAVITY * delta
@@ -106,6 +137,7 @@ func _physics_process(delta: float) -> void:
 
 	_state_t += delta
 	_think_t -= delta
+	_refresh_label()
 
 	match _state:
 		St.IDLE:
@@ -129,14 +161,14 @@ func _physics_process(delta: float) -> void:
 
 # ----------------------------------------------------------------- decidir
 func _decide() -> void:
-	_think_t = randf_range(9.0, 18.0)
+	_think_t = randf_range(6.0, 12.0)
 	var b := band()
 	var r := randf()
-	if b == "hostile" and r < 0.42 + boldness * 0.25:
+	if b == "hostile" and r < 0.40 + boldness * 0.30:
 		_start_sneak()
-	elif b != "hostile" and r < 0.28 + boldness * 0.22:
+	elif b != "hostile" and r < 0.42 + boldness * 0.28:
 		_start_approach()
-	elif r < 0.78:
+	elif r < 0.82:
 		_go_to(_rand(_wander_list()), St.PATROL)
 	else:
 		_state = St.IDLE
@@ -175,12 +207,12 @@ func _go_to(goal: String, s: int) -> void:
 
 func _go_innocent() -> void:
 	_salute(false)
+	_notify_toast("%s se aparta demasiado rapido. Algo se trae entre manos." % GameState.crew_name(id))
+	say("...", 1.6)
 	var g := _rand(_wander_list())
 	_path = _path_to(g) if g != "" else []
 	_state = St.INNOCENT
 	_state_t = 0.0
-	if randf() < 0.4:
-		say("...", 1.4)
 
 
 # ----------------------------------------------------------------- mover
@@ -231,6 +263,10 @@ func _concealing() -> void:
 	GameState.nudge_meter(key, (-amt if key == "cash" else amt))
 	GameState.adjust_trust(id, -1)
 	did_shady = true
+	if key == "cash":
+		_notify_toast("Falta dinero en la caja. Alguien la toco.")
+	elif key == "command_suspicion":
+		_notify_toast("Los mandos parecen saber mas de lo que deberian.")
 	_go_to(_rand(_wander_list()), St.PATROL)
 
 
@@ -245,10 +281,11 @@ func _reporting(delta: float) -> void:
 	if _state_t < 0.15:
 		_salute(true)
 		var line := _rand(def.get("reports", ["Sin novedad, comandante."]))
-		say(GameState.crew_name(id) + ": " + line, 4.5)
+		say(GameState.crew_name(id) + ": " + line, 5.0)
+		_notify_toast("%s te da un parte." % GameState.crew_name(id))
 		if band() == "loyal" and randf() < 0.5:
 			GameState.nudge_meter("command_suspicion", -2)
-	elif _state_t > 4.6:
+	elif _state_t > 5.0:
 		_salute(false)
 		_go_to(_rand(_wander_list()), St.PATROL)
 
@@ -257,7 +294,7 @@ func _salute(up: bool) -> void:
 	if _arm_r == null:
 		return
 	var tw := create_tween()
-	tw.tween_property(_arm_r, "rotation_degrees:x", (138.0 if up else 0.0), 0.28)
+	tw.tween_property(_arm_r, "rotation:x", (deg_to_rad(138.0) if up else 0.0), 0.28)
 
 
 # ----------------------------------------------------------------- percepcion
